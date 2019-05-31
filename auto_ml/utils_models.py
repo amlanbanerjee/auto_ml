@@ -2,6 +2,7 @@ import dill
 import os
 import random
 import sys
+import numpy as np
 
 from auto_ml import utils
 from auto_ml import utils_categorical_ensembling
@@ -173,8 +174,8 @@ def get_model_from_name(model_name, training_params=None, is_hp_search=False):
         model_map['LGBMClassifier'] = LGBMClassifier()
 
     if catboost_installed:
-        model_map['CatBoostRegressor'] = CatBoostRegressor(calc_feature_importance=True)
-        model_map['CatBoostClassifier'] = CatBoostClassifier(calc_feature_importance=True)
+        model_map['CatBoostRegressor'] = CatBoostRegressor()
+        model_map['CatBoostClassifier'] = CatBoostClassifier()
 
     if model_name[:12] == 'DeepLearning':
         if keras_imported == False:
@@ -340,40 +341,42 @@ def get_search_params(model_name):
         },
         'DeepLearningClassifier': {
             'hidden_layers': [
-                [1],
-                [0.5],
-                [2],
-                [1, 1],
-                [0.5, 0.5],
-                [2, 2],
-                [1, 1, 1],
-                [1, 0.5, 0.5],
-                [0.5, 1, 1],
-                [1, 0.5, 0.25],
-                [1, 2, 1],
-                [1, 1, 1, 1],
-                [1, 0.66, 0.33, 0.1],
+             #   [1],
+             #   [0.5],
+             #   [2],
+             #   [1, 1],
+             #   [0.5, 0.5],
+             #   [2, 2],
+             #   [1, 1, 1],
+             #   [1, 0.5, 0.5],
+             #   [0.5, 1, 1],
+             #   [1, 0.5, 0.25],
+             #   [1, 2, 1],
+             #   [1, 1, 1, 1],
+             #   [1, 0.66, 0.33, 0.1],
                 [1, 2, 2, 1]
             ]
-            , 'batch_size': [16, 32, 64, 128, 256, 512]
+            , 'batch_size': [64]
             , 'optimizer': ['SGD', 'RMSprop', 'Adagrad', 'Adadelta', 'Adam', 'Adamax', 'Nadam']
-            , 'activation': ['tanh', 'softmax', 'elu', 'softplus', 'softsign', 'relu', 'sigmoid', 'hard_sigmoid', 'linear', 'LeakyReLU', 'PReLU', 'ELU', 'ThresholdedReLU']
-            # , 'epochs': [2, 4, 6, 10, 20]
+            #, 'activation': ['tanh', 'softmax', 'elu', 'softplus', 'softsign', 'relu', 'sigmoid', 'hard_sigmoid', 'linear', 'LeakyReLU', 'PReLU', 'ELU', 'ThresholdedReLU']
+            , 'activation': ['tanh', 'softmax', 'elu', 'relu', 'sigmoid']
+			# , 'epochs': [2, 4, 6, 10, 20]
             # , 'batch_size': [10, 25, 50, 100, 200, 1000]
             # , 'lr': [0.001, 0.01, 0.1, 0.3]
             # , 'momentum': [0.0, 0.3, 0.6, 0.8, 0.9]
             # , 'init_mode': ['uniform', 'lecun_uniform', 'normal', 'zero', 'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform']
             # , 'activation': ['softmax', 'softplus', 'softsign', 'relu', 'tanh', 'sigmoid', 'hard_sigmoid', 'linear']
             # , 'weight_constraint': [1, 3, 5]
-            , 'dropout_rate': [0.0, 0.3, 0.6, 0.8, 0.9]
+			, 'final_activation': ['sigmoid']
+            , 'dropout_rate': [0.3]
         },
         'XGBClassifier': {
-            'max_depth': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15],
-            'learning_rate': [0.01, 0.05, 0.1, 0.2],
-            'n_estimators': [50, 75, 100, 150, 200, 375, 500, 750, 1000],
-            'min_child_weight': [1, 5, 10, 50],
-            'subsample': [0.5, 0.8, 1.0],
-            'colsample_bytree': [0.5, 0.8, 1.0]
+            'max_depth': [25],
+            'learning_rate': np.random.uniform(0.005,0.01,25).tolist(),
+            'n_estimators': [500],
+            'min_child_weight': np.random.uniform(1,50,1).tolist(),
+            'subsample': [0.5],
+            'colsample_bytree': np.random.uniform(0.5,1,1).tolist()
             # 'subsample': [0.5, 1.0]
             # 'lambda': [0.9, 1.0]
         },
@@ -545,9 +548,10 @@ def get_search_params(model_name):
         }
 
         , 'CatBoostClassifier': {
-            'depth': [1, 2, 3, 5, 7, 9, 12, 15, 20, 32]
-            , 'l2_leaf_reg': [.0000001, .000001, .00001, .0001, .001, .01, .1]
-            , 'learning_rate': [0.01, 0.05, 0.1, 0.15, 0.2, 0.3]
+            'l2_leaf_reg': [.0000001, .000001, .00001, .0001, .001, .01, .1]
+			#'depth': [5]
+            , 'learning_rate': [0.01, 0.05, 0.1]
+			, 'n_estimators': [500]
 
             # , random_strength
             # , bagging_temperature
@@ -714,10 +718,10 @@ def make_deep_learning_model(hidden_layers=None, num_cols=None, optimizer='Adade
 def make_deep_learning_classifier(hidden_layers=None, num_cols=None, optimizer='Adadelta', dropout_rate=0.2, weight_constraint=0, final_activation='sigmoid', feature_learning=False, activation='elu', kernel_initializer='normal'):
 
     if feature_learning == True and hidden_layers is None:
-        hidden_layers = [1, 0.75, 0.25]
+        hidden_layers = [1, 1, 1, 1, 1, 1]
 
     if hidden_layers is None:
-        hidden_layers = [1, 0.75, 0.25]
+        hidden_layers = [1, 1, 1, 1, 1, 1]
 
     # The hidden_layers passed to us is simply describing a shape. it does not know the num_cols we are dealing with, it is simply values of 0.5, 1, and 2, which need to be multiplied by the num_cols
     scaled_layers = []
